@@ -54,8 +54,7 @@ cp .env.example .env
 ```
 
 Ouvrir `.env`, puis remplacer toutes les valeurs commençant par
-`replacer_...` ou `ajouter_...`. Le fichier `.env` est local et ne doit jamais
-être poussé sur Git.
+`replacer_...` ou `ajouter_...`. Le fichier `.env` est local et pour des questions de securité ne doit pas etre push
 
 Générer les trois clés Airflow suivantes :
 
@@ -68,6 +67,8 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 # Valeur de AIRFLOW_JWT_SECRET : relancer la commande pour obtenir une autre clé
 python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Vous pouvez retrouver toutes ces variables dans le .env.example
 ```
 
 Copier chaque résultat dans la variable indiquée. Conserver
