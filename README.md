@@ -10,21 +10,7 @@ implémenté.
 
 ## Architecture
 
-```text
-Batch
-Streamlit -> CSV validés avec Avro -> MinIO raw-landing
-          -> Spark -> Iceberg Bronze / Silver / Gold -> Trino
-                         ^
-                         |
-                      Airflow
-
-Streaming
-MinIO raw-landing -> NiFi -> Kafka Raw
-                  -> Spark Job 1 -> Kafka Silver + Iceberg Silver
-                  -> Spark Job 2 -> topics Gold (fraude, AML, liquidité)
-
-Trino interroge les tables Iceberg et les topics Kafka.
-```
+![Architecture WABA](./image_architecture/architecture.png)
 
 ### Partitionnement Iceberg
 
