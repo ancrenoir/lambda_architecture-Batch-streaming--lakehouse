@@ -1,0 +1,61 @@
+# ==========================================
+# ENVIRONNEMENT ET SECRETS
+# ==========================================
+
+.env
+.env.*
+.env_challenge/
+
+# ==========================================
+# PYTHON
+# ==========================================
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.eggs/
+build/
+dist/
+
+
+# ==========================================
+# SPARK cette configuration est mise par precaution
+# ==========================================
+
+spark/work/
+spark/logs/
+spark/spark-warehouse/
+spark/warehouse/
+spark/checkpoints/
+metastore_db/
+derby.log
+
+# ==========================================
+# MINIO ET DONNEES LOCALES
+# ==========================================
+
+minio/data/
+
+# ==========================================
+# FICHIERS TEMPORAIRES
+# ==========================================
+
+tmp/
+*.tmp
+*.temp
+*.log
+*.bak
+*.swp
+
+# ==========================================
+# IDE ET SYSTEME
+# ==========================================
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+/tests
+

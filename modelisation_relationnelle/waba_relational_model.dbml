@@ -1,0 +1,300 @@
+Project WABA_Relational_Model {
+  database_type: "Lakehouse logical model"
+  Note: '''
+    Modèle relationnel des fichiers sources du challenge Artefact.
+
+    Les relations des sept tables documentées dans l'annexe sont représentées
+    directement. Le schéma de products.csv et la relation de souscription sont
+    des extensions documentées, nécessaires au catalogue de 50 produits et au
+    Top 10 des produits souscrits demandé dans la suite du challenge.
+
+    Règle globale de l'énoncé : toutes les tables doivent permettre l'analyse
+    par country_code et entity_type. Ces champs sont donc présents même lorsque
+    la capture d'un schéma particulier ne les affiche pas.
+  '''
+}
+
+Enum entity_type_enum {
+  BANK
+  INSURANCE
+  MOBILE_MONEY
+  MICROFINANCE
+}
+
+Enum customer_segment_enum {
+  RETAIL
+  SME
+  CORPORATE
+  PREMIUM
+}
+
+Enum kyc_level_enum {
+  BASIC
+  STANDARD
+  ENHANCED
+}
+
+Enum account_type_enum {
+  CURRENT
+  SAVINGS
+  LOAN
+  MOBILE_WALLET
+  INSURANCE_POLICY
+}
+
+Enum account_status_enum {
+  ACTIVE
+  FROZEN
+  CLOSED
+  DORMANT
+}
+
+Enum branch_type_enum {
+  FULL_SERVICE
+  DIGITAL_ONLY
+  AGENCY_BANKING
+  ATM_POINT
+}
+
+Enum bank_transaction_type_enum {
+  TRANSFER
+  PAYMENT
+  WITHDRAWAL
+  DEPOSIT
+  INTERNATIONAL_WIRE
+}
+
+Enum bank_channel_enum {
+  BRANCH
+  ATM
+  MOBILE_APP
+  INTERNET_BANKING
+  USSD
+}
+
+Enum bank_transaction_status_enum {
+  SUCCESS
+  FAILED
+  REVERSED
+}
+
+Enum insurance_operation_type_enum {
+  PREMIUM_PAYMENT
+  CLAIM_SUBMISSION
+  CLAIM_PAYMENT
+  POLICY_RENEWAL
+  POLICY_CANCELLATION
+}
+
+Enum insurance_product_line_enum {
+  VIE
+  IARD_AUTO
+  IARD_HABITATION
+  IARD_SANTE
+  PREVOYANCE
+}
+
+Enum claim_status_enum {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+Enum mobile_operator_enum {
+  WABA_PAY
+  ORANGE_MONEY_PARTNER
+  MTN_PARTNER
+}
+
+Enum mobile_payment_status_enum {
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+Enum loan_type_enum {
+  CONSUMER
+  MORTGAGE
+  SME
+  AGRICULTURAL
+  MICROCREDIT
+}
+
+Enum repayment_status_enum {
+  ON_TIME
+  LATE
+  DEFAULT
+}
+
+Table customers {
+  customer_id varchar [pk, not null, note: "Identifiant unique, exemple WABA-CI-C-000001"]
+  country_code char(2) [not null, note: "CI, SN, ML, BF, GN, TG, BJ ou GH"]
+  entity_type entity_type_enum [not null]
+  segment customer_segment_enum [not null]
+  kyc_level kyc_level_enum [not null]
+  onboarding_date date [not null]
+  region varchar [not null]
+  is_active boolean [not null]
+
+  Note: "Une ligne représente une relation client au sein d'une entité WABA."
+}
+
+Table accounts {
+  account_id varchar [pk, not null, note: "Identifiant unique, exemple WABA-CI-A-000001"]
+  customer_id varchar [not null]
+  product_id varchar [not null, note: "Extension documentée : produit commercial souscrit ; colonne absente du schéma A.2 fourni"]
+  country_code char(2) [not null, note: "Doit être cohérent avec le pays du client"]
+  entity_type entity_type_enum [not null, note: "Ajouté conformément à la contrainte globale de l'énoncé"]
+  account_type account_type_enum [not null]
+  currency char(3) [not null, note: "XOF pour les pays UEMOA du challenge, GHS pour le Ghana"]
+  balance float [not null, note: "Solde courant en devise locale"]
+  credit_limit float [not null, default: 0, note: "Plafond de crédit autorisé ; 0 lorsque non applicable"]
+  opened_date date [not null]
+  status account_status_enum [not null]
+
+  Note: '''
+    Une ligne représente un compte ou contrat détenu par un client et matérialise
+    sa souscription à un produit commercial.
+    Le type de compte doit être compatible avec entity_type.
+    account_type, country_code et entity_type doivent être cohérents avec le
+    produit référencé.
+  '''
+}
+
+Table branches {
+  branch_id varchar [pk, not null, note: "Identifiant unique, exemple WABA-CI-B-001"]
+  country_code char(2) [not null]
+  entity_type entity_type_enum [not null]
+  city varchar [not null]
+  region varchar [not null]
+  branch_type branch_type_enum [not null]
+  is_active boolean [not null]
+
+  Note: "Une ligne représente une agence ou un point de service WABA."
+}
+
+Table products {
+  product_id varchar [pk, not null, note: "Identifiant unique du produit commercial"]
+  product_name varchar [not null, note: "Exemples : Compte Essentiel, Compte Étudiant, Compte Medium, Épargne Avenir, Prêt Conso Express, WABA Pay Standard, Assurance Auto Sérénité, Assurance Vie Avenir"]
+  country_code char(2) [not null]
+  entity_type entity_type_enum [not null]
+  account_type account_type_enum [not null, note: "Catégorie de compte ou contrat associée au produit"]
+  target_segment customer_segment_enum [not null, note: "Segment client principal ciblé par l'offre"]
+  product_line insurance_product_line_enum [note: "Renseigné uniquement pour les produits d'assurance"]
+  loan_type loan_type_enum [note: "Renseigné uniquement pour les produits de crédit"]
+  is_active boolean [not null]
+
+  Note: '''
+    Une ligne représente une offre commerciale WABA dans un pays.
+    Ce schéma est une extension documentée : products.csv et raw.products sont
+    exigés avec 50 lignes, mais leurs attributs ne sont pas fournis dans l'annexe.
+
+    Règles conditionnelles :
+    - product_line est requis pour entity_type=INSURANCE et NULL sinon ;
+    - loan_type est requis pour account_type=LOAN et NULL sinon.
+  '''
+}
+
+Table bank_transactions {
+  transaction_id varchar [pk, not null, note: "UUID v4"]
+  timestamp timestamp [not null]
+  account_id varchar [not null, note: "Compte débiteur"]
+  beneficiary_account varchar [not null, note: "Compte bénéficiaire"]
+  branch_id varchar [not null, note: "Agence d'origine"]
+  country_code char(2) [not null]
+  transaction_type bank_transaction_type_enum [not null]
+  amount float [not null, note: "Montant en devise locale"]
+  currency char(3) [not null]
+  channel bank_channel_enum [not null]
+  transaction_status bank_transaction_status_enum [not null, note: "Distribution suggérée : SUCCESS 92 %, FAILED 5 %, REVERSED 3 %"]
+  fee_amount float [not null, note: "Frais appliqués en devise locale"]
+  entity_type entity_type_enum [not null, note: "Valeurs métier attendues : BANK ou MICROFINANCE"]
+
+  Note: '''
+    Une ligne représente une tentative d'opération bancaire unique.
+    account_id et beneficiary_account forment la paire débiteur-bénéficiaire et
+    référencent deux rôles distincts de la même table accounts.
+  '''
+}
+
+Table insurance_operations {
+  operation_id varchar [pk, not null, note: "UUID v4"]
+  timestamp timestamp [not null]
+  customer_id varchar [not null, note: "Client assuré"]
+  account_id varchar [not null, note: "Compte ou police d'assurance"]
+  country_code char(2) [not null]
+  operation_type insurance_operation_type_enum [not null]
+  product_line insurance_product_line_enum [not null]
+  amount float [not null, note: "Montant en devise locale"]
+  currency char(3) [not null]
+  claim_status claim_status_enum [note: "NULL si l'opération ne concerne pas un sinistre"]
+  processing_days int [note: "NULL si l'opération ne concerne pas un sinistre"]
+  entity_type entity_type_enum [not null, note: "Valeur métier attendue : INSURANCE"]
+
+  Note: '''
+    Une ligne représente une opération d'assurance unique.
+    Le compte référencé doit appartenir au customer_id de la ligne et être
+    compatible avec une police d'assurance.
+  '''
+}
+
+Table mobile_money_payments {
+  payment_id varchar [pk, not null, note: "UUID v4"]
+  timestamp timestamp [not null]
+  sender_id varchar [not null, note: "Client expéditeur"]
+  receiver_id varchar [not null, note: "Client destinataire"]
+  sender_country char(2) [not null]
+  receiver_country char(2) [not null, note: "Peut différer pour un transfert transfrontalier"]
+  country_code char(2) [not null, note: "Pays de rattachement analytique ; ajouté selon la contrainte globale"]
+  amount float [not null, note: "Montant en devise de l'expéditeur"]
+  currency char(3) [not null]
+  operator mobile_operator_enum [not null]
+  status mobile_payment_status_enum [not null, note: "Distribution suggérée : SUCCESS 94 %, FAILED 4 %, PENDING 2 %"]
+  fee_amount float [not null]
+  entity_type entity_type_enum [not null, note: "Valeur métier attendue : MOBILE_MONEY"]
+
+  Note: '''
+    Une ligne représente un paiement ou transfert mobile unique.
+    Le schéma fourni référence directement les clients, sans account_id vers un
+    compte MOBILE_WALLET.
+  '''
+}
+
+Table loan_repayments {
+  repayment_id varchar [pk, not null, note: "UUID v4"]
+  timestamp timestamp [not null]
+  loan_account_id varchar [not null, note: "Doit référencer un compte de type LOAN"]
+  customer_id varchar [not null, note: "Client emprunteur"]
+  country_code char(2) [not null]
+  amount_due float [not null, note: "Montant attendu selon l'échéancier"]
+  amount_paid float [not null, note: "Montant effectivement payé ; 0 si défaut"]
+  currency char(3) [not null]
+  due_date date [not null]
+  payment_date date [note: "NULL si impayé"]
+  days_overdue int [not null, default: 0, note: "0 si payé à temps ou en avance"]
+  loan_type loan_type_enum [not null]
+  repayment_status repayment_status_enum [not null, note: "Distribution suggérée : ON_TIME 82 %, LATE 12 %, DEFAULT 6 %"]
+  entity_type entity_type_enum [not null, note: "Valeurs métier attendues : BANK ou MICROFINANCE"]
+
+  Note: '''
+    Une ligne représente une échéance ou un remboursement de prêt.
+    Le compte de prêt doit appartenir au customer_id de la même ligne.
+  '''
+}
+
+Ref customer_accounts: customers.customer_id < accounts.customer_id
+Ref product_accounts: products.product_id < accounts.product_id
+
+Ref debtor_account_transactions: accounts.account_id < bank_transactions.account_id
+Ref beneficiary_account_transactions: accounts.account_id < bank_transactions.beneficiary_account
+Ref branch_bank_transactions: branches.branch_id < bank_transactions.branch_id
+
+Ref customer_insurance_operations: customers.customer_id < insurance_operations.customer_id
+Ref account_insurance_operations: accounts.account_id < insurance_operations.account_id
+
+Ref sender_mobile_payments: customers.customer_id < mobile_money_payments.sender_id
+Ref receiver_mobile_payments: customers.customer_id < mobile_money_payments.receiver_id
+
+Ref loan_account_repayments: accounts.account_id < loan_repayments.loan_account_id
+Ref customer_loan_repayments: customers.customer_id < loan_repayments.customer_id

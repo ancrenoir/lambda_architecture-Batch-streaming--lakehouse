@@ -1,0 +1,2 @@
+operation_id,timestamp,customer_id,account_id,country_code,operation_type,product_line,amount,currency,claim_status,processing_days,entity_type
+00000000-0000-4000-8000-000000000001,2026-10-04T12:00:00,WABA-CI-C-000009,WABA-CI-A-0000009,CI,PREMIUM_PAYMENT,IARD_AUTO,25000.0,XOF,PAID,2,INSURANCE

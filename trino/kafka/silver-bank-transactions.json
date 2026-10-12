@@ -1,0 +1,46 @@
+{
+  "tableName": "silver-bank-transactions",
+  "schemaName": "default",
+  "topicName": "silver-bank-transactions",
+  "message": {
+    "dataFormat": "json",
+    "fields": [
+      {
+        "name": "transaction_id",
+        "mapping": "transaction_id",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "event_time",
+        "mapping": "timestamp",
+        "type": "TIMESTAMP(3) WITH TIME ZONE",
+        "dataFormat": "iso8601"
+      },
+      {
+        "name": "country_code",
+        "mapping": "country_code",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "entity_type",
+        "mapping": "entity_type",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "transaction_type",
+        "mapping": "transaction_type",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "transaction_status",
+        "mapping": "transaction_status",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "streaming_amount_eur",
+        "mapping": "amount_eur",
+        "type": "DOUBLE"
+      }
+    ]
+  }
+}

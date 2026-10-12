@@ -1,0 +1,519 @@
+name: waba-data-platform
+
+x-airflow-common: &airflow-common
+  build:
+    context: ./airflow
+    dockerfile: Dockerfile
+    additional_contexts:
+      spark_runtime: service:spark-master
+  image: waba-airflow:dev
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+      postgresql+psycopg2://${AIRFLOW_DB_USER:?AIRFLOW_DB_USER must be set}:${AIRFLOW_DB_PASSWORD:?AIRFLOW_DB_PASSWORD must be set}@postgres_metastore:5432/${AIRFLOW_DB_NAME:?AIRFLOW_DB_NAME must be set}
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:?AIRFLOW_FERNET_KEY must be set}
+    AIRFLOW__API__SECRET_KEY: ${AIRFLOW_API_SECRET_KEY:?AIRFLOW_API_SECRET_KEY must be set}
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET:?AIRFLOW_JWT_SECRET must be set}
+    AIRFLOW__API_AUTH__JWT_ALGORITHM: ${AIRFLOW_JWT_ALGORITHM:-HS512}
+    AIRFLOW__API_AUTH__ACCESS_TOKEN_EXPIRE_MINUTES: ${AIRFLOW_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+    AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME:?AIRFLOW_ADMIN_USERNAME must be set}
+    AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:?AIRFLOW_ADMIN_PASSWORD must be set}
+    AIRFLOW_ADMIN_EMAIL: ${AIRFLOW_ADMIN_EMAIL:?AIRFLOW_ADMIN_EMAIL must be set}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__PARALLELISM: "8"
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: "4"
+    AIRFLOW__API__BASE_URL: http://localhost:${AIRFLOW_PORT:-8081}
+    AIRFLOW__SDK__API__BASE_URL: http://airflow-api:8080
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api:8080/execution/
+    PYTHONPATH: /opt/airflow
+    MINIO_ENDPOINT: minio:9000
+    MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+    MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    MINIO_SECURE: "false"
+    S3_REGION: us-east-1
+    ICEBERG_REST_CATALOG_URI: http://hive-metastore:9001/iceberg
+    ICEBERG_WAREHOUSE: s3a://lakehouse/iceberg_tables
+    SPARK_DRIVER_MEMORY: ${SPARK_DRIVER_MEMORY:-4g}
+    SPARK_SQL_SHUFFLE_PARTITIONS: ${SPARK_SQL_SHUFFLE_PARTITIONS:-64}
+    SPARK_STREAMING_SQL_SHUFFLE_PARTITIONS: ${SPARK_STREAMING_SQL_SHUFFLE_PARTITIONS:-8}
+    KAFKA_BOOTSTRAP_SERVERS: broker:29092
+    KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags:ro
+    - airflow_logs:/opt/airflow/logs
+    - ./spark:/opt/airflow/spark:ro
+  networks:
+    - data_network
+
+services:
+  airflow_postgres_init:
+    image: postgres:16-alpine
+    environment:
+      PGHOST: postgres_metastore
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:?POSTGRES_USER must be set}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      AIRFLOW_DB_NAME: ${AIRFLOW_DB_NAME:?AIRFLOW_DB_NAME must be set}
+      AIRFLOW_DB_USER: ${AIRFLOW_DB_USER:?AIRFLOW_DB_USER must be set}
+      AIRFLOW_DB_PASSWORD: ${AIRFLOW_DB_PASSWORD:?AIRFLOW_DB_PASSWORD must be set}
+    volumes:
+      - ./airflow/init_postgres.sh:/bootstrap/init_postgres.sh:ro
+    command: ["/bin/sh", "/bootstrap/init_postgres.sh"]
+    depends_on:
+      postgres_metastore:
+        condition: service_healthy
+    networks:
+      - data_network
+    restart: "no"
+
+  airflow-init:
+    <<: *airflow-common
+    # L'image officielle a "airflow" comme entrypoint. On le remplace ici car
+    # ce service ponctuel doit exécuter plusieurs commandes d'initialisation.
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -eu
+        airflow db migrate
+        if ! airflow users list | grep -q "$$AIRFLOW_ADMIN_USERNAME"; then
+          airflow users create \
+            --username "$$AIRFLOW_ADMIN_USERNAME" \
+            --password "$$AIRFLOW_ADMIN_PASSWORD" \
+            --firstname "WABA" \
+            --lastname "Administrator" \
+            --role Admin \
+            --email "$$AIRFLOW_ADMIN_EMAIL"
+        fi
+        
+        if ! airflow connections get spark_standalone >/dev/null 2>&1; then
+          airflow connections add spark_standalone \
+            --conn-type spark \
+            --conn-host "spark://spark-master" \
+            --conn-port "7077"
+        fi
+        airflow pools set spark_pool 1 "Une application Spark à la fois"
+    restart: "no"
+    depends_on:
+      airflow_postgres_init:
+        condition: service_completed_successfully
+
+  airflow-api:
+    <<: *airflow-common
+    container_name: airflow-api
+    command: ["airflow", "api-server", "--host", "0.0.0.0", "--port", "8080"]
+    ports:
+      - "${AIRFLOW_PORT:-8081}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/v2/monitor/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: ["airflow", "scheduler"]
+    depends_on:
+      airflow-api:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: ["airflow", "dag-processor"]
+    restart: unless-stopped
+    depends_on:
+      airflow-api:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    hostname: zookeeper
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD-SHELL", "echo srvr | nc -w 2 localhost 2181 | grep -q 'Mode:'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - data_network
+
+  broker:
+    image: confluentinc/cp-kafka:7.4.0
+    hostname: broker
+    container_name: broker
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${KAFKA_HOST_PORT:-9092}:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server broker:29092 --list >/dev/null"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - data_network
+  kafka_init:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on:
+      broker:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -eu
+
+        TOPICS="
+        raw-bank-transactions
+        raw-insurance-operations
+        raw-mobile-money-payments
+        raw-loan-repayments
+        silver-bank-transactions
+        silver-insurance-operations
+        silver-mobile-money
+        gold-fraud-alerts
+        gold-aml-events
+        gold-liquidity-alerts
+        dlq-financial-events
+        "
+
+        for topic in $$TOPICS; do
+          kafka-topics \
+            --bootstrap-server broker:29092 \
+            --create \
+            --if-not-exists \
+            --topic "$$topic" \
+            --partitions 1 \
+            --replication-factor 1
+        done
+
+        kafka-topics \
+          --bootstrap-server broker:29092 \
+          --list
+    restart: "no"
+    networks:
+      - data_network
+
+  nifi:
+    image: apache/nifi:2.12.0
+    hostname: nifi
+    container_name: nifi
+    ports:
+      - "127.0.0.1:${NIFI_HTTPS_PORT:-8443}:8443"
+    environment:
+      NIFI_WEB_HTTPS_PORT: "8443"
+      SINGLE_USER_CREDENTIALS_USERNAME: ${NIFI_ADMIN_USERNAME:?NIFI_ADMIN_USERNAME must be set}
+      SINGLE_USER_CREDENTIALS_PASSWORD: ${NIFI_ADMIN_PASSWORD:?NIFI_ADMIN_PASSWORD must be set}
+      NIFI_JVM_HEAP_INIT: 512m
+      NIFI_JVM_HEAP_MAX: 1g
+
+      # Identifiants transmis par l'environnement, jamais écrits dans le flow NiFi.
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      AWS_REGION: us-east-1
+    volumes:
+      - nifi_conf:/opt/nifi/nifi-current/conf
+      - nifi_database_repository:/opt/nifi/nifi-current/database_repository
+      - nifi_flowfile_repository:/opt/nifi/nifi-current/flowfile_repository
+      - nifi_content_repository:/opt/nifi/nifi-current/content_repository
+      - nifi_provenance_repository:/opt/nifi/nifi-current/provenance_repository
+      - nifi_state:/opt/nifi/nifi-current/state
+      - nifi_logs:/opt/nifi/nifi-current/logs
+    depends_on:
+      minio:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    healthcheck:
+      # NiFi HTTPS écoute sur l'adresse réseau du conteneur, pas sur son loopback.
+      test: ["CMD-SHELL", "curl --insecure --fail --silent https://nifi:8443/nifi/ > /dev/null"]
+      interval: 20s
+      timeout: 10s
+      retries: 30
+      start_period: 90s
+    restart: unless-stopped
+    networks:
+      - data_network
+
+  minio:
+    build:
+      context: ./minio
+      dockerfile: Dockerfile
+    image: waba-minio:RELEASE.2025-10-15T17-29-55Z
+    command: server /data --address ":9000" --console-address ":9001"
+    restart: unless-stopped
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000" # 9000 expose l'api qui sera utilser par python et spark pour communiquer avec minio
+      - "${MINIO_CONSOLE_PORT:-9001}:9001" # 9001 pour l'interface web de minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    volumes:
+      - minio_data:/data
+    networks:
+      - data_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  minio_init:
+    image: waba-minio:RELEASE.2025-10-15T17-29-55Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    command:
+      - |
+        set -eu
+        mc alias set waba http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing waba/raw-landing
+        mc mb --ignore-existing waba/lakehouse
+        mc mb --ignore-existing waba/archive
+        mc anonymous set none waba/raw-landing
+        mc anonymous set none waba/lakehouse
+        mc anonymous set none waba/archive
+        mc ls waba
+    networks:
+      - data_network
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: "no"
+  streamlit_dev:
+    build:
+      context: .
+      dockerfile: streamlit/Dockerfile
+    image: waba-streamlit:dev
+    volumes:
+      - ./streamlit:/app/streamlit:ro
+      - ./scripts:/app/scripts:ro
+      - ./schemas:/app/schemas:ro
+      - ./tests:/app/tests:ro
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    environment:
+      PYTHONPATH: /app
+      STREAMLIT_SERVER_RUN_ON_SAVE: "true"
+      STREAMLIT_SERVER_FILE_WATCHER_TYPE: poll
+      STREAMLIT_SERVER_HEADLESS: "true"
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      MINIO_SECURE: "false"
+      MINIO_BUCKET: raw-landing
+      
+#J'ai rendu dependant l'interface du simulateur de systèmes data de waba à minio
+#cas les interaction user demande une communication avec minio lors de l'envoie des csv vers le bucket row-landing
+    depends_on:
+      minio:
+        condition: service_healthy
+      minio_init:
+        condition: service_completed_successfully
+    networks:
+      - data_network
+  postgres_metastore:
+    image: postgres:16-alpine
+    container_name: postgres_metastore
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB doit etre rempli}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER doit etre rempli}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD doit etre rempli}
+    volumes:
+      - postgres_metastore_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data_network
+  hive-metastore:
+    build:
+      context: ./spark/hive_metastore
+      dockerfile: Dockerfile
+    image: hive-metastore:dev
+    container_name: hive-metastore
+    environment:
+      DB_DRIVER: postgres
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER doit etre rempli}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD doit etre rempli}
+      SERVICE_OPTS: >-
+        -Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver
+        -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres_metastore:5432/${POSTGRES_DB:?POSTGRES_DB doit etre rempli}
+        -Djavax.jdo.option.ConnectionUserName=${POSTGRES_USER:?POSTGRES_USER doit etre rempli}
+        -Djavax.jdo.option.ConnectionPassword=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD doit etre rempli}
+      DEFAULT_FS: s3a://lakehouse
+      HIVE_WAREHOUSE_PATH: /iceberg_tables
+      S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    depends_on:
+      postgres_metastore:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9083'"]
+      interval: 1m30s
+      timeout: 20s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "9083:9083"
+    networks:
+      - data_network
+  spark-master:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    image: waba-spark:dev
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
+    ports:
+      - "${SPARK_MASTER_UI_PORT:-8082}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/ > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - data_network
+  spark-worker:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    image: waba-spark:dev
+    volumes:
+      - ./spark:/app/spark
+    environment:
+      PYTHONPATH: /app
+      ICEBERG_REST_CATALOG_URI: http://hive-metastore:9001/iceberg
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      MINIO_SECURE: "false"
+      ICEBERG_WAREHOUSE: s3a://lakehouse/iceberg_tables
+      SPARK_DRIVER_MEMORY: ${SPARK_DRIVER_MEMORY:-4g}
+      SPARK_SQL_SHUFFLE_PARTITIONS: ${SPARK_SQL_SHUFFLE_PARTITIONS:-64}
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - --cores
+      - "${SPARK_WORKER_CORES:-4}"
+      - --memory
+      - "${SPARK_WORKER_MEMORY:-4g}"
+      - spark://spark-master:7077
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/ > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      spark-master:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      hive-metastore:
+        condition: service_healthy
+      minio_init:
+        condition: service_completed_successfully
+    networks:
+      - data_network
+  trino:
+    image: trinodb/trino:483
+    container_name: trino
+    ports:
+      - "${TRINO_PORT:-8080}:8080"
+    volumes:
+      - ./trino/catalogue:/etc/trino/catalog:ro
+      - ./trino/kafka:/etc/trino/kafka:ro
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    depends_on:
+      minio:
+        condition: service_healthy
+      hive-metastore:
+        condition: service_healthy
+    networks:
+      - data_network
+
+volumes:
+  minio_data:
+  postgres_metastore_data:
+  airflow_logs:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_data:
+  nifi_conf:
+  nifi_database_repository:
+  nifi_flowfile_repository:
+  nifi_content_repository:
+  nifi_provenance_repository:
+  nifi_state:
+  nifi_logs:
+
+networks:
+  data_network:
+    driver: bridge

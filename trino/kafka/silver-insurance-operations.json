@@ -1,0 +1,76 @@
+{
+  "tableName": "silver-insurance-operations",
+  "schemaName": "default",
+  "topicName": "silver-insurance-operations",
+  "message": {
+    "dataFormat": "json",
+    "fields": [
+      {
+        "name": "operation_id",
+        "mapping": "operation_id",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "event_time",
+        "mapping": "timestamp",
+        "type": "TIMESTAMP(3) WITH TIME ZONE",
+        "dataFormat": "iso8601"
+      },
+      {
+        "name": "customer_id",
+        "mapping": "customer_id",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "account_id",
+        "mapping": "account_id",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "country_code",
+        "mapping": "country_code",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "operation_type",
+        "mapping": "operation_type",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "product_line",
+        "mapping": "product_line",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "amount",
+        "mapping": "amount",
+        "type": "DOUBLE"
+      },
+      {
+        "name": "currency",
+        "mapping": "currency",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "amount_eur",
+        "mapping": "amount_eur",
+        "type": "DOUBLE"
+      },
+      {
+        "name": "claim_status",
+        "mapping": "claim_status",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "processing_days",
+        "mapping": "processing_days",
+        "type": "INTEGER"
+      },
+      {
+        "name": "entity_type",
+        "mapping": "entity_type",
+        "type": "VARCHAR"
+      }
+    ]
+  }
+}

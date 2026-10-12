@@ -1,0 +1,20 @@
+{
+  "type": "record",
+  "name": "BankTransaction",
+  "namespace": "com.waba.raw",
+  "fields": [
+    {"name": "transaction_id", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-micros"}},
+    {"name": "account_id", "type": "string"},
+    {"name": "beneficiary_account", "type": "string"},
+    {"name": "branch_id", "type": "string"},
+    {"name": "country_code", "type": {"type": "enum", "name": "BankCountryCode", "symbols": ["CI", "SN", "ML", "BF", "GN", "TG", "BJ", "GH"]}},
+    {"name": "transaction_type", "type": {"type": "enum", "name": "BankTransactionType", "symbols": ["TRANSFER", "PAYMENT", "WITHDRAWAL", "DEPOSIT", "INTERNATIONAL_WIRE"]}},
+    {"name": "amount", "type": "double"},
+    {"name": "currency", "type": {"type": "enum", "name": "BankCurrency", "symbols": ["XOF", "GHS"]}},
+    {"name": "channel", "type": {"type": "enum", "name": "BankChannel", "symbols": ["BRANCH", "ATM", "MOBILE_APP", "INTERNET_BANKING", "USSD"]}},
+    {"name": "transaction_status", "type": {"type": "enum", "name": "BankTransactionStatus", "symbols": ["SUCCESS", "FAILED", "REVERSED"]}},
+    {"name": "fee_amount", "type": "double"},
+    {"name": "entity_type", "type": {"type": "enum", "name": "BankEntityType", "symbols": ["BANK", "MICROFINANCE"]}}
+  ]
+}

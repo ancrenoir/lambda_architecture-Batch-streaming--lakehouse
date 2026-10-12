@@ -1,0 +1,21 @@
+{
+  "type": "record",
+  "name": "LoanRepayment",
+  "namespace": "com.waba.raw",
+  "fields": [
+    {"name": "repayment_id", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-micros"}},
+    {"name": "loan_account_id", "type": "string"},
+    {"name": "customer_id", "type": "string"},
+    {"name": "country_code", "type": {"type": "enum", "name": "LoanCountryCode", "symbols": ["CI", "SN", "ML", "BF", "GN", "TG", "BJ", "GH"]}},
+    {"name": "amount_due", "type": "double"},
+    {"name": "amount_paid", "type": "double"},
+    {"name": "currency", "type": {"type": "enum", "name": "LoanCurrency", "symbols": ["XOF", "GHS"]}},
+    {"name": "due_date", "type": {"type": "int", "logicalType": "date"}},
+    {"name": "payment_date", "type": ["null", {"type": "int", "logicalType": "date"}], "default": null},
+    {"name": "days_overdue", "type": "int"},
+    {"name": "loan_type", "type": {"type": "enum", "name": "LoanRepaymentType", "symbols": ["CONSUMER", "MORTGAGE", "SME", "AGRICULTURAL", "MICROCREDIT"]}},
+    {"name": "repayment_status", "type": {"type": "enum", "name": "LoanRepaymentStatus", "symbols": ["ON_TIME", "LATE", "DEFAULT"]}},
+    {"name": "entity_type", "type": {"type": "enum", "name": "LoanEntityType", "symbols": ["BANK", "MICROFINANCE"]}}
+  ]
+}

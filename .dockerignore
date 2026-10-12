@@ -1,0 +1,14 @@
+# Ne jamais envoyer les secrets dans un contexte de build Docker.
+.env
+.env.*
+!.env.example
+secrets/
+
+# Metadonnees et fichiers generes localement.
+.git/
+.env_challenge/
+__pycache__/
+*.py[cod]
+AI_agent/
+output/
+tmp/

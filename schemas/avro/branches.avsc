@@ -1,0 +1,35 @@
+{
+  "type": "record",
+  "name": "Branch",
+  "namespace": "com.waba.raw",
+  "fields": [
+    {"name": "branch_id", "type": "string"},
+    {
+      "name": "country_code",
+      "type": {
+        "type": "enum",
+        "name": "BranchCountryCode",
+        "symbols": ["CI", "SN", "ML", "BF", "GN", "TG", "BJ", "GH"]
+      }
+    },
+    {
+      "name": "entity_type",
+      "type": {
+        "type": "enum",
+        "name": "BranchEntityType",
+        "symbols": ["BANK", "INSURANCE", "MOBILE_MONEY", "MICROFINANCE"]
+      }
+    },
+    {"name": "city", "type": "string"},
+    {"name": "region", "type": "string"},
+    {
+      "name": "branch_type",
+      "type": {
+        "type": "enum",
+        "name": "BranchType",
+        "symbols": ["FULL_SERVICE", "DIGITAL_ONLY", "AGENCY_BANKING", "ATM_POINT"]
+      }
+    },
+    {"name": "is_active", "type": "boolean"}
+  ]
+}

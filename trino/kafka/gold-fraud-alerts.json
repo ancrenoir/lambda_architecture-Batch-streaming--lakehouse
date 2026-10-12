@@ -1,0 +1,28 @@
+{
+  "tableName": "gold-fraud-alerts",
+  "schemaName": "default",
+  "topicName": "gold-fraud-alerts",
+  "message": {
+    "dataFormat": "json",
+    "fields": [
+      {"name":"alert_type","mapping":"alert_type","type":"VARCHAR"},
+      {"name":"detected_at","mapping":"detected_at","type":"TIMESTAMP(3) WITH TIME ZONE","dataFormat":"iso8601"},
+      {"name":"country_code","mapping":"country_code","type":"VARCHAR"},
+      {"name":"account_id","mapping":"account_id","type":"VARCHAR"},
+      {"name":"window_start","mapping":"window_start","type":"TIMESTAMP(3) WITH TIME ZONE","dataFormat":"iso8601"},
+      {"name":"window_end","mapping":"window_end","type":"TIMESTAMP(3) WITH TIME ZONE","dataFormat":"iso8601"},
+      {"name":"transaction_count","mapping":"transaction_count","type":"BIGINT"},
+      {"name":"total_amount","mapping":"total_amount","type":"DOUBLE"},
+      {"name":"payment_id","mapping":"payment_id","type":"VARCHAR"},
+      {"name":"sender_id","mapping":"sender_id","type":"VARCHAR"},
+      {"name":"sender_country","mapping":"sender_country","type":"VARCHAR"},
+      {"name":"profile_country_code","mapping":"profile_country_code","type":"VARCHAR"},
+      {"name":"operation_id","mapping":"operation_id","type":"VARCHAR"},
+      {"name":"customer_id","mapping":"customer_id","type":"VARCHAR"},
+      {"name":"operation_type","mapping":"operation_type","type":"VARCHAR"},
+      {"name":"amount_eur","mapping":"amount_eur","type":"DOUBLE"},
+      {"name":"annual_premium_amount_eur","mapping":"annual_premium_amount_eur","type":"DOUBLE"},
+      {"name":"fraud_threshold_eur","mapping":"fraud_threshold_eur","type":"DOUBLE"}
+    ]
+  }
+}

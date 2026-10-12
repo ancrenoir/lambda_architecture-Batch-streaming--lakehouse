@@ -1,0 +1,11 @@
+streamlit==1.64.0
+altair
+pandas
+requests
+streamlit-authenticator
+bcrypt
+streamlit-lottie
+numpy==2.5.3
+minio==7.2.20
+fastavro==1.12.2
+python-dateutil==2.9.0.post0

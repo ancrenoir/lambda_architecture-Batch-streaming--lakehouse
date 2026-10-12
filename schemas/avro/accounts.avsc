@@ -1,0 +1,46 @@
+{
+  "type": "record",
+  "name": "Account",
+  "namespace": "com.waba.raw",
+  "fields": [
+    {"name": "account_id", "type": "string"},
+    {"name": "customer_id", "type": "string"},
+    {"name": "product_id", "type": "string"},
+    {
+      "name": "country_code",
+      "type": {
+        "type": "enum",
+        "name": "AccountCountryCode",
+        "symbols": ["CI", "SN", "ML", "BF", "GN", "TG", "BJ", "GH"]
+      }
+    },
+    {
+      "name": "entity_type",
+      "type": {
+        "type": "enum",
+        "name": "AccountEntityType",
+        "symbols": ["BANK", "INSURANCE", "MOBILE_MONEY", "MICROFINANCE"]
+      }
+    },
+    {
+      "name": "account_type",
+      "type": {
+        "type": "enum",
+        "name": "AccountType",
+        "symbols": ["CURRENT", "SAVINGS", "LOAN", "MOBILE_WALLET", "INSURANCE_POLICY"]
+      }
+    },
+    {"name": "currency", "type": {"type": "enum", "name": "AccountCurrency", "symbols": ["XOF", "GHS"]}},
+    {"name": "balance", "type": "double"},
+    {"name": "credit_limit", "type": "double"},
+    {"name": "opened_date", "type": {"type": "int", "logicalType": "date"}},
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "AccountStatus",
+        "symbols": ["ACTIVE", "FROZEN", "CLOSED", "DORMANT"]
+      }
+    }
+  ]
+}

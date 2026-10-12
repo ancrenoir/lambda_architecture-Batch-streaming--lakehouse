@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "InsuranceOperation",
+  "namespace": "com.waba.raw",
+  "fields": [
+    {"name": "operation_id", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-micros"}},
+    {"name": "customer_id", "type": "string"},
+    {"name": "account_id", "type": "string"},
+    {"name": "country_code", "type": {"type": "enum", "name": "InsuranceCountryCode", "symbols": ["CI", "SN", "ML", "BF", "GN", "TG", "BJ", "GH"]}},
+    {"name": "operation_type", "type": {"type": "enum", "name": "InsuranceOperationType", "symbols": ["PREMIUM_PAYMENT", "CLAIM_SUBMISSION", "CLAIM_PAYMENT", "POLICY_RENEWAL", "POLICY_CANCELLATION"]}},
+    {"name": "product_line", "type": {"type": "enum", "name": "InsuranceProductLine", "symbols": ["VIE", "IARD_AUTO", "IARD_HABITATION", "IARD_SANTE", "PREVOYANCE"]}},
+    {"name": "amount", "type": "double"},
+    {"name": "currency", "type": {"type": "enum", "name": "InsuranceCurrency", "symbols": ["XOF", "GHS"]}},
+    {"name": "claim_status", "type": ["null", {"type": "enum", "name": "InsuranceClaimStatus", "symbols": ["PENDING", "APPROVED", "REJECTED", "PAID"]}], "default": null},
+    {"name": "processing_days", "type": ["null", "int"], "default": null},
+    {"name": "entity_type", "type": {"type": "enum", "name": "InsuranceEntityType", "symbols": ["INSURANCE"]}}
+  ]
+}

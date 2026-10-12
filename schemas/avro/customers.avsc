@@ -1,0 +1,46 @@
+{
+  "type": "record",
+  "name": "Customer",
+  "namespace": "com.waba.raw",
+  "fields": [
+    {"name": "customer_id", "type": "string"},
+    {
+      "name": "country_code",
+      "type": {
+        "type": "enum",
+        "name": "CountryCode",
+        "symbols": ["CI", "SN", "ML", "BF", "GN", "TG", "BJ", "GH"]
+      }
+    },
+    {
+      "name": "entity_type",
+      "type": {
+        "type": "enum",
+        "name": "EntityType",
+        "symbols": ["BANK", "INSURANCE", "MOBILE_MONEY", "MICROFINANCE"]
+      }
+    },
+    {
+      "name": "segment",
+      "type": {
+        "type": "enum",
+        "name": "CustomerSegment",
+        "symbols": ["RETAIL", "SME", "CORPORATE", "PREMIUM"]
+      }
+    },
+    {
+      "name": "kyc_level",
+      "type": {
+        "type": "enum",
+        "name": "KycLevel",
+        "symbols": ["BASIC", "STANDARD", "ENHANCED"]
+      }
+    },
+    {
+      "name": "onboarding_date",
+      "type": {"type": "int", "logicalType": "date"}
+    },
+    {"name": "region", "type": "string"},
+    {"name": "is_active", "type": "boolean"}
+  ]
+}

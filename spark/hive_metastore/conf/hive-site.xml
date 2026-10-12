@@ -1,0 +1,11 @@
+<configuration>
+  <property>
+    <name>hive.metastore.warehouse.dir</name>
+    <value>s3a://lakehouse/iceberg_tables</value>
+  </property>
+
+  <property>
+    <name>hive.metastore.warehouse.external.dir</name>
+    <value>s3a://lakehouse/iceberg_tables</value>
+  </property>
+</configuration>

@@ -1,0 +1,8 @@
+# Fournit SparkSubmitOperator pour les DAGs d'orchestration.
+apache-airflow-providers-apache-spark
+
+# Fournit l'authentification locale par utilisateur pour l'interface Airflow.
+apache-airflow-providers-fab
+
+# Pilote PostgreSQL de la base de métadonnées Airflow.
+psycopg2-binary

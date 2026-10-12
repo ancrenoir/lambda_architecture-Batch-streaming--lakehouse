@@ -1,0 +1,25 @@
+{
+  "tableName": "silver-mobile-money",
+  "schemaName": "default",
+  "topicName": "silver-mobile-money",
+  "message": {
+    "dataFormat": "json",
+    "fields": [
+      {"name":"payment_id","mapping":"payment_id","type":"VARCHAR"},
+      {"name":"event_time","mapping":"timestamp","type":"TIMESTAMP(3) WITH TIME ZONE","dataFormat":"iso8601"},
+      {"name":"sender_id","mapping":"sender_id","type":"VARCHAR"},
+      {"name":"receiver_id","mapping":"receiver_id","type":"VARCHAR"},
+      {"name":"sender_country","mapping":"sender_country","type":"VARCHAR"},
+      {"name":"receiver_country","mapping":"receiver_country","type":"VARCHAR"},
+      {"name":"country_code","mapping":"country_code","type":"VARCHAR"},
+      {"name":"amount","mapping":"amount","type":"DOUBLE"},
+      {"name":"currency","mapping":"currency","type":"VARCHAR"},
+      {"name":"amount_eur","mapping":"amount_eur","type":"DOUBLE"},
+      {"name":"operator","mapping":"operator","type":"VARCHAR"},
+      {"name":"status","mapping":"status","type":"VARCHAR"},
+      {"name":"fee_amount","mapping":"fee_amount","type":"DOUBLE"},
+      {"name":"fee_amount_eur","mapping":"fee_amount_eur","type":"DOUBLE"},
+      {"name":"entity_type","mapping":"entity_type","type":"VARCHAR"}
+    ]
+  }
+}

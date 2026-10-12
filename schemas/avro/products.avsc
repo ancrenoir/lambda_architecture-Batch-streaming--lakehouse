@@ -1,0 +1,66 @@
+{
+  "type": "record",
+  "name": "Product",
+  "namespace": "com.waba.raw",
+  "fields": [
+    {"name": "product_id", "type": "string"},
+    {"name": "product_name", "type": "string"},
+    {
+      "name": "country_code",
+      "type": {
+        "type": "enum",
+        "name": "ProductCountryCode",
+        "symbols": ["CI", "SN", "ML", "BF", "GN", "TG", "BJ", "GH"]
+      }
+    },
+    {
+      "name": "entity_type",
+      "type": {
+        "type": "enum",
+        "name": "ProductEntityType",
+        "symbols": ["BANK", "INSURANCE", "MOBILE_MONEY", "MICROFINANCE"]
+      }
+    },
+    {
+      "name": "account_type",
+      "type": {
+        "type": "enum",
+        "name": "ProductAccountType",
+        "symbols": ["CURRENT", "SAVINGS", "LOAN", "MOBILE_WALLET", "INSURANCE_POLICY"]
+      }
+    },
+    {
+      "name": "target_segment",
+      "type": {
+        "type": "enum",
+        "name": "ProductTargetSegment",
+        "symbols": ["RETAIL", "SME", "CORPORATE", "PREMIUM"]
+      }
+    },
+    {
+      "name": "product_line",
+      "type": [
+        "null",
+        {
+          "type": "enum",
+          "name": "ProductInsuranceLine",
+          "symbols": ["VIE", "IARD_AUTO", "IARD_HABITATION", "IARD_SANTE", "PREVOYANCE"]
+        }
+      ],
+      "default": null
+    },
+    {
+      "name": "loan_type",
+      "type": [
+        "null",
+        {
+          "type": "enum",
+          "name": "ProductLoanType",
+          "symbols": ["CONSUMER", "MORTGAGE", "SME", "AGRICULTURAL", "MICROCREDIT"]
+        }
+      ],
+      "default": null
+    },
+    {"name": "is_active", "type": "boolean"}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "tableName": "gold-liquidity-alerts",
+  "schemaName": "default",
+  "topicName": "gold-liquidity-alerts",
+  "message": {
+    "dataFormat": "json",
+    "fields": [
+      {"name":"alert_type","mapping":"alert_type","type":"VARCHAR"},
+      {"name":"detected_at","mapping":"detected_at","type":"TIMESTAMP(3) WITH TIME ZONE","dataFormat":"iso8601"},
+      {"name":"country_code","mapping":"country_code","type":"VARCHAR"},
+      {"name":"variation_cumulee_eur","mapping":"variation_cumulee_eur","type":"DOUBLE"},
+      {"name":"solde_reference_eur","mapping":"solde_reference_eur","type":"DOUBLE"},
+      {"name":"solde_estime_eur","mapping":"solde_estime_eur","type":"DOUBLE"},
+      {"name":"liquidity_coverage_ratio","mapping":"liquidity_coverage_ratio","type":"DOUBLE"},
+      {"name":"minimum_coverage_ratio","mapping":"minimum_coverage_ratio","type":"DOUBLE"}
+    ]
+  }
+}

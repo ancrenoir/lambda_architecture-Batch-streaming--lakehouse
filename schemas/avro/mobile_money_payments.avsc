@@ -1,0 +1,20 @@
+{
+  "type": "record",
+  "name": "MobileMoneyPayment",
+  "namespace": "com.waba.raw",
+  "fields": [
+    {"name": "payment_id", "type": "string"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-micros"}},
+    {"name": "sender_id", "type": "string"},
+    {"name": "receiver_id", "type": "string"},
+    {"name": "sender_country", "type": {"type": "enum", "name": "MobileSenderCountry", "symbols": ["CI", "SN", "ML", "BF", "GN", "TG", "BJ", "GH"]}},
+    {"name": "receiver_country", "type": {"type": "enum", "name": "MobileReceiverCountry", "symbols": ["CI", "SN", "ML", "BF", "GN", "TG", "BJ", "GH"]}},
+    {"name": "country_code", "type": {"type": "enum", "name": "MobileCountryCode", "symbols": ["CI", "SN", "ML", "BF", "GN", "TG", "BJ", "GH"]}},
+    {"name": "amount", "type": "double"},
+    {"name": "currency", "type": {"type": "enum", "name": "MobileCurrency", "symbols": ["XOF", "GHS"]}},
+    {"name": "operator", "type": {"type": "enum", "name": "MobileOperator", "symbols": ["WABA_PAY", "ORANGE_MONEY_PARTNER", "MTN_PARTNER"]}},
+    {"name": "status", "type": {"type": "enum", "name": "MobilePaymentStatus", "symbols": ["SUCCESS", "FAILED", "PENDING"]}},
+    {"name": "fee_amount", "type": "double"},
+    {"name": "entity_type", "type": {"type": "enum", "name": "MobileEntityType", "symbols": ["MOBILE_MONEY"]}}
+  ]
+}
