@@ -1,4 +1,4 @@
-# WABA Financial Data Platform
+# WABA Group Data Platform
 
 Plateforme Data Lakehouse multi-pays réalisée pour le challenge Data Engineer
 d'Artefact.
